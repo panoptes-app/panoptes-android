@@ -43,6 +43,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
     // UI references.
     private var mEmailView: AutoCompleteTextView? = null
     private var mPasswordView: EditText? = null
+    private var mServerUrl: EditText? = null
     private var mProgressView: View? = null
     private var mLoginFormView: View? = null
 
@@ -60,6 +61,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         populateAutoComplete()
 
         mPasswordView = password as EditText
+        mServerUrl = serverUrl as EditText
         mPasswordView?.setOnEditorActionListener(TextView.OnEditorActionListener { textView, id, keyEvent ->
             if (id == R.id.login || id == EditorInfo.IME_NULL) {
                 attemptLogin()
@@ -134,6 +136,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         // Store values at the time of the login attempt.
         val email = mEmailView?.text.toString()
         val password = mPasswordView?.text.toString()
+        val serverUrl = mServerUrl?.text.toString()
 
         var cancel = false
         var focusView: View? = null
@@ -164,7 +167,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true)
-            mAuthTask = UserLoginTask(email, password)
+            mAuthTask = UserLoginTask(serverUrl, email, password)
             mAuthTask?.execute(null)
         }
     }
@@ -264,10 +267,10 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    inner class UserLoginTask internal constructor(private val mEmail: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean?>() {
+    inner class UserLoginTask internal constructor(private val mServerUrl: String, private val mEmail: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean?>() {
 
-        fun createAccount(mEmail: String, mPassword: String): Boolean{
-            val (request, response, result) = "http://192.168.1.19:8080/auth".httpPost(listOf("login" to mEmail, "password" to mPassword)).response()
+        fun createAccount(mServerUrl: String, mEmail: String, mPassword: String): Boolean{
+            val (request, response, result) = "${mServerUrl}/auth".httpPost(listOf("login" to mEmail, "password" to mPassword)).response()
             when (response.httpStatusCode) {
                 200 -> return true
                 else -> {
@@ -281,7 +284,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
 
         override fun doInBackground(vararg params: Void): Boolean {
             // TODO: attempt authentication against a network service.
-            val (request, response, result) = "http://192.168.1.64:8080/auth".httpGet(listOf("login" to mEmail, "password" to mPassword)).response()
+            val (request, response, result) = "${mServerUrl}/auth".httpGet(listOf("login" to mEmail, "password" to mPassword)).response()
             when (response.httpStatusCode){
                 200 -> return true
                 401 -> {
@@ -289,9 +292,9 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
 //                    LoginActivity.getInstance().mPasswordView?.requestFocus()
                     return false
                 }
-                404 -> return createAccount(mEmail, mPassword)
+                404 -> return createAccount(mServerUrl, mEmail, mPassword)
                 else -> {
-                    LoginActivity.getInstance().mEmailView?.error = "impossible to authenticate user : server offline"
+                    LoginActivity.getInstance().mEmailView?.error = "impossible to authenticate user : server offline ${mServerUrl}"
                     //@TODO change this
                     return true
                 }
