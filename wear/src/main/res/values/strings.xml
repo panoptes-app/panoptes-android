@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Panoptes</string>
+    <string name="hello_world">Hello World!</string>
+    <string name="start_locate_me">Start</string>
+    <string name="stop_locate_me">Stop</string>
+    <string name="card_start_title">start title</string>
+    <string name="card_start_text">start text</string>
+</resources>
