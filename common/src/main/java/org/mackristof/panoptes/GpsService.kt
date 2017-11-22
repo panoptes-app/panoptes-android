@@ -179,7 +179,7 @@ class GpsService: Service(), GoogleApiClient.ConnectionCallbacks,
     }
 
     override fun onConnectionFailed(connectionResult: ConnectionResult) {
-        Log.e(Constants.TAG, "onConnectionFailed(): " + connectionResult?.errorMessage)
+        Log.e(Constants.TAG, "onConnectionFailed(): " + connectionResult.errorMessage)
         broadcaster?.sendBroadcast(Intent(Constants.INTENT_LOCATION).putExtra(Constants.INTENT_LOCATION_STATUS, "gps connection failed"))
     }
 

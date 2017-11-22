@@ -6,12 +6,17 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile 'com.google.android.gms:play-services-wearable:9.4.0'
     compile 'com.google.android.gms:play-services-location:9.4.0'
-    compile 'com.google.android.gms:play-services:9.4.0'
-    compile 'com.android.support:support-v13:23.1.1'
+//    compile 'com.google.android.gms:play-services:9.4.0'
+    compile 'com.android.support:support-v13:25.3.1'
+
+    // Required -- JUnit 4 framework
+    testCompile 'junit:junit:4.12'
+    // Optional -- Mockito framework
+    testCompile 'org.mockito:mockito-core:2.11.0'
 
 }
 buildscript {
-    ext.kotlin_version = '1.1.4-3'
+    ext.kotlin_version = '1.1.60'
     repositories {
         mavenCentral()
     }
@@ -25,7 +30,23 @@ repositories {
 android {
     defaultConfig {
         minSdkVersion 20
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    sourceSets {
+        test.java.srcDirs += 'src/test/kotlin'
+        androidTest.java.srcDirs += 'src/androidTest/kotlin'
     }
     compileSdkVersion 23
-    buildToolsVersion "25.0.0"
+    buildToolsVersion '26.0.2'
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+}
+
+afterEvaluate {
+    android.sourceSets.all { sourceSet ->
+        if (!sourceSet.name.startsWith('test') || !sourceSet.name.startsWith('androidTest')) {
+            sourceSet.kotlin.setSrcDirs([])
+        }
+    }
 }

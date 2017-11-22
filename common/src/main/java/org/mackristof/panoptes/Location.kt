@@ -2,6 +2,7 @@ package org.mackristof.panoptes
 
 import android.os.Parcel
 import android.os.Parcelable
+import org.json.JSONObject
 
 
 data class Location (val timestamp: Long,
@@ -26,6 +27,18 @@ data class Location (val timestamp: Long,
         dest?.writeDouble(this.corAlt)
         dest?.writeFloat(this.acc)
         dest?.writeInt(this.nbSats)
+    }
+
+    fun toJsonObject(): JSONObject  {
+        val jsonObject = JSONObject()
+        jsonObject.put("timestamp", timestamp)
+        jsonObject.put("lat", lat)
+        jsonObject.put("lon", lon)
+        jsonObject.put("alt", alt)
+        jsonObject.put("corAlt", corAlt)
+        jsonObject.put("acc", acc)
+        jsonObject.put("nbsats", nbSats)
+        return jsonObject
     }
 
     companion object {

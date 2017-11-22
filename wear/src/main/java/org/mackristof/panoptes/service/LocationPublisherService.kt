@@ -69,11 +69,7 @@ class LocationPublisherService: Service(), GoogleApiClient.ConnectionCallbacks,
     private class LocationBroadcastReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent!!.hasExtra(Constants.INTENT_LOCATION)){
-                if (Utils.isRunningOnWatch(context!!)) {
-                    LocationPublisherService.getInstance().putLocationToDataApi(intent.getParcelableExtra(Constants.INTENT_LOCATION))
-                } else {
-                    LocationPublisherService.getInstance().publishCurrentLocation(intent.getParcelableExtra(Constants.INTENT_LOCATION))
-                }
+                LocationPublisherService.getInstance().putLocationToDataApi(intent.getParcelableExtra(Constants.INTENT_LOCATION))
             }
         }
 

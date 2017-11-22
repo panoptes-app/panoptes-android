@@ -22,14 +22,15 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import android.widget.EditText
-import android.widget.TextView
-import com.github.kittinunf.fuel.httpGet
-import com.github.kittinunf.fuel.httpPost
+import android.widget.*
+
 import kotlinx.android.synthetic.main.activity_login.*
+import org.mackristof.panoptes.service.MobileMqttPublisherService
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.*
+import javax.net.ssl.HttpsURLConnection
 
 /**
  * A login screen that offers login via email/password.
@@ -46,6 +47,8 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
     private var mServerUrl: EditText? = null
     private var mProgressView: View? = null
     private var mLoginFormView: View? = null
+    private var bSignIn: Button? = null
+    private var bSignUp: Button? = null
 
 
     override fun onPause() {
@@ -62,17 +65,20 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
 
         mPasswordView = password as EditText
         mServerUrl = serverUrl as EditText
+        bSignIn = email_sign_in_button as Button
+        bSignUp = email_sign_up_button as Button
         mPasswordView?.setOnEditorActionListener(TextView.OnEditorActionListener { textView, id, keyEvent ->
             if (id == R.id.login || id == EditorInfo.IME_NULL) {
-                attemptLogin()
+                attempt("login")
                 return@OnEditorActionListener true
             }
             false
         })
 
         val mEmailSignInButton = email_sign_in_button
-        mEmailSignInButton.setOnClickListener { attemptLogin() }
-
+        mEmailSignInButton.setOnClickListener { attempt("login") }
+        val mEmailSignUpButton = email_sign_up_button
+        mEmailSignUpButton.setOnClickListener { attempt("signup") }
         mLoginFormView = login_form
         mProgressView = login_progress
     }
@@ -124,7 +130,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
      * If there are form errors (invalid email, missing fields, etc.), the
      * errors are presented and no actual login attempt is made.
      */
-    private fun attemptLogin() {
+    private fun attempt(type: String) {
         if (mAuthTask != null) {
             return
         }
@@ -167,8 +173,10 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true)
-            mAuthTask = UserLoginTask(serverUrl, email, password)
+
+            mAuthTask = UserLoginTask(serverUrl, email, password, type)
             mAuthTask?.execute(null)
+
         }
     }
 
@@ -179,7 +187,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
 
     private fun isPasswordValid(password: String): Boolean {
         //TODO: Replace this with your own logic
-        return password.length > 4
+        return password.length >= 4
     }
 
     /**
@@ -267,48 +275,76 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    inner class UserLoginTask internal constructor(private val mServerUrl: String, private val mEmail: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean?>() {
+    inner class UserLoginTask internal constructor(private val mServerUrl: String, private val mEmail: String, private val mPassword: String, private val authAction: String) : AsyncTask<Void, Void, Boolean?>() {
 
-        fun createAccount(mServerUrl: String, mEmail: String, mPassword: String): Boolean{
-            val (request, response, result) = "${mServerUrl}/auth".httpPost(listOf("login" to mEmail, "password" to mPassword)).response()
-            when (response.httpStatusCode) {
-                200 -> return true
-                else -> {
-                    Log.e(LoginActivity::class.java.simpleName, "error result from account creation request : "+ response.httpStatusCode)
-                    LoginActivity.getInstance().mEmailView?.error = response.httpResponseMessage + " in account creation"
-//                    LoginActivity.getInstance().mEmailView?.requestFocus()
-                    return false
-                }
-            }
-        }
+
 
         override fun doInBackground(vararg params: Void): Boolean {
-            // TODO: attempt authentication against a network service.
-            val (request, response, result) = "${mServerUrl}/auth".httpGet(listOf("login" to mEmail, "password" to mPassword)).response()
-            when (response.httpStatusCode){
-                200 -> return true
-                401 -> {
-                    LoginActivity.getInstance().mPasswordView?.error = getString(R.string.error_incorrect_password)
+
+            if (authAction == "login") {
+                // TODO: attempt authentication against a network service.
+                val responseCode = doRequest("GET", mServerUrl+"auth/?login="+URLEncoder.encode(mEmail, "UTF-8")+"&password="+URLEncoder.encode(mPassword, "UTF-8"))
+                when (responseCode) {
+                    200 -> return true
+                    401 -> {
+                        LoginActivity.getInstance().mPasswordView?.error = getString(R.string.error_incorrect_password)
 //                    LoginActivity.getInstance().mPasswordView?.requestFocus()
-                    return false
+                        return false
+                    }
+                    403 -> {
+                        LoginActivity.getInstance().mEmailView?.error = getString(R.string.error_unknown_email)
+                        LoginActivity.getInstance().runOnUiThread({
+                            LoginActivity.getInstance().bSignIn?.visibility = View.INVISIBLE
+                            LoginActivity.getInstance().bSignUp?.visibility = View.VISIBLE
+                        })
+                        return false
+                    }
+                    else -> {
+                        LoginActivity.getInstance().mEmailView?.error = "impossible to authenticate user : server offline ${mServerUrl}"
+                        //@TODO change this
+                        return true
+                    }
                 }
-                404 -> return createAccount(mServerUrl, mEmail, mPassword)
-                else -> {
-                    LoginActivity.getInstance().mEmailView?.error = "impossible to authenticate user : server offline ${mServerUrl}"
-                    //@TODO change this
-                    return true
+            } else if (authAction == "signup") {
+                val responseCode = doRequest("POST", mServerUrl + "user/?login=" + URLEncoder.encode(mEmail, "UTF-8") + "&password=" + URLEncoder.encode(mPassword, "UTF-8"))
+                when (responseCode) {
+                    200 -> {
+                        LoginActivity.getInstance().runOnUiThread({
+                            LoginActivity.getInstance().bSignIn?.visibility = View.VISIBLE
+                            LoginActivity.getInstance().bSignUp?.visibility = View.INVISIBLE
+                        })
+                        return false
+                    }
+                    401 -> {
+                        LoginActivity.getInstance().mPasswordView?.error = getString(R.string.error_incorrect_password)
+//                    LoginActivity.getInstance().mPasswordView?.requestFocus()
+                        return false
+                    }
+                    403 -> {
+                        return false
+                    }
+                    else -> {
+                        LoginActivity.getInstance().mEmailView?.error = "impossible to authenticate user : server offline ${mServerUrl}"
+                        //@TODO change this
+                        return true
+                    }
                 }
             }
-
+            return false
         }
 
         override fun onPostExecute(success: Boolean?) {
             mAuthTask = null
             showProgress(false)
 
-            if (success!!) {
+            if (success!! && authAction == "login") {
                 finish()
-                val i = Intent(applicationContext as Context, MainActivity::class.java)
+                var mqttIntent = Intent(applicationContext, MobileMqttPublisherService::class.java)
+                mqttIntent.putExtra(Constants.INTENT_MQTT_URL, mServerUrl.replace(":8080/", ":1883").replace("http:", "tcp:"))
+                mqttIntent.putExtra(Constants.INTENT_MQTT_LOGIN, mEmail)
+                mqttIntent.putExtra(Constants.INTENT_MQTT_PASSWORD, mPassword)
+                startService(mqttIntent)
+                val i = Intent(applicationContext, MainActivity::class.java)
                 startActivity(i)
 
             }
@@ -317,6 +353,17 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         override fun onCancelled() {
             mAuthTask = null
             showProgress(false)
+        }
+
+        fun doRequest(method: String, urlString: String): Int {
+            var url = URL(urlString)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.setRequestMethod(method)
+            connection.doOutput= false
+            connection.connectTimeout =5000
+            connection.readTimeout = 5000
+            connection.connect()
+            return connection.responseCode
         }
     }
 

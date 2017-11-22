@@ -1,6 +1,8 @@
 package org.mackristof.panoptes.service
 
+import android.content.Intent
 import android.os.Bundle
+import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
@@ -18,6 +20,14 @@ class MobileWearableListenerService : WearableListenerService(), GoogleApiClient
 
     private var mGoogleApiClient: GoogleApiClient? = null
     private var nodeConnected = false
+
+    var broadcaster: LocalBroadcastManager? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.i(Constants.TAG,"MobileWearableListenerService started ")
+        broadcaster = LocalBroadcastManager.getInstance(applicationContext)
+        return super.onStartCommand(intent, flags, startId)
+    }
 
     override fun onCreate() {
         mGoogleApiClient = GoogleApiClient.Builder(applicationContext)
@@ -55,6 +65,7 @@ class MobileWearableListenerService : WearableListenerService(), GoogleApiClient
                         nbSats = 0
                 )
                 Log.i(Constants.TAG, "receiving location at ${location.timestamp} with ${location.lat}/${location.lon}")
+                broadcaster?.sendBroadcast(Intent(Constants.INTENT_LOCATION).putExtra(Constants.INTENT_LOCATION_STATUS, "located").putExtra(Constants.INTENT_LOCATION, location))
             }
         }
 

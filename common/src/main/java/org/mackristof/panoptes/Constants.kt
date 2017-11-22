@@ -16,6 +16,10 @@ class Constants {
         val GPS_UPDATE_INTERVAL_MS: Long = 1000
         val GPS_FASTEST_INTERVAL_MS: Long = 0
         val DATA_ITEM_PATH_LOCATION = "/location"
+        val INTENT_MQTT_URL = "url"
+        val INTENT_MQTT_LOGIN = "login"
+        val INTENT_MQTT_PASSWORD = "password"
+        val INTENT_START_TRACK_LOCATION = "start_track"
 
 
     }

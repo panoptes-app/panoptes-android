@@ -9,8 +9,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.media.MediaScannerConnection
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.NotificationCompat
+import java.io.File
 
 class Utils {
 
@@ -50,6 +52,34 @@ class Utils {
             notificationManager.notify(0,notification)
 
         }
+
+        fun getDistanceTraveled(prev: Location, loc: Location): Double {
+
+            return Utils.calculateDistance(
+                    prev.lat,
+                    prev.lon,
+                    loc.lat,
+                    loc.lon)
+
+        }
+
+        fun addToMediaDatabase(folder: File, mimeType: String){
+            val context = GpxLoggerService.getInstance().applicationContext
+            MediaScannerConnection.scanFile(context, arrayOf(folder.path), arrayOf(mimeType), null)
+        }
+
+
+        private fun calculateDistance(latitude1: Double, longitude1: Double, latitude2: Double, longitude2: Double): Double {
+            val deltaLatitude = Math.toRadians(Math.abs(latitude1 - latitude2))
+            val deltaLongitude = Math.toRadians(Math.abs(longitude1 - longitude2))
+            val latitude1Rad = Math.toRadians(latitude1)
+            val latitude2Rad = Math.toRadians(latitude2)
+            val a = Math.pow(Math.sin(deltaLatitude / 2), 2.0) + Math.cos(latitude1Rad) * Math.cos(latitude2Rad) * Math.pow(Math.sin(deltaLongitude / 2), 2.0)
+            val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            return 6371.0 * c * 1000.0 //unit : meters
+
+        }
+
     }
 
 
